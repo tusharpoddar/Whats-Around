@@ -9,7 +9,7 @@ import android.util.Log;
 
 public class Splash extends AppCompatActivity {
 
-    private static int SPLASH_TIME = 1000;
+    private static int SPLASH_TIME = 2000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,7 +21,7 @@ public class Splash extends AppCompatActivity {
             public void run() {
                 Log.d("Result","Hi there ");
                 //Do any action here. Now we are moving to next page
-                Intent mySuperIntent = new Intent(Splash.this, Second.class);
+                Intent mySuperIntent = new Intent(Splash.this, DetectorActivity.class);
                 startActivity(mySuperIntent);
                 finish();
             }

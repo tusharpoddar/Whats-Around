@@ -19,6 +19,7 @@ package org.tensorflow.lite.examples.detection;
 import android.Manifest;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
@@ -44,7 +45,11 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.appcompat.widget.Toolbar;
+
+import android.speech.RecognizerIntent;
+import android.util.Log;
 import android.util.Size;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -55,6 +60,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Locale;
+
 import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
 
@@ -87,6 +95,8 @@ public abstract class CameraActivity extends AppCompatActivity
   protected boolean rotVecCheck;
 
 
+  protected String res = "";
+
 
   protected TextView frameValueTextView, cropValueTextView, inferenceTimeTextView;
 
@@ -117,14 +127,8 @@ public abstract class CameraActivity extends AppCompatActivity
     rotationVector = null;
     rotVecCheck = false;
 
-    frameValueTextView = findViewById(R.id.frame_info); // USE THIS TO SET THE WORD
-    cropValueTextView = findViewById(R.id.crop_info);
-    inferenceTimeTextView = findViewById(R.id.inference_info);
+    frameValueTextView = findViewById(R.id.frame_info);
 
-    SharedPreferences pref = getApplicationContext().getSharedPreferences("MyPref", MODE_PRIVATE);
-
-
-    frameValueTextView.setText(pref.getString("word", null));
 
   }
 
@@ -444,6 +448,55 @@ public abstract class CameraActivity extends AppCompatActivity
         return 90;
       default:
         return 0;
+    }
+  }
+
+  public void getSpeechInput() {
+
+    Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+
+    if (intent.resolveActivity(getPackageManager()) != null) {
+      startActivityForResult(intent, 10);
+    } else {
+//      Toast.makeText(this, "Your Device Don't Support Speech Input", Toast.LENGTH_SHORT).show();
+    }
+  }
+
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+
+    switch (requestCode) {
+      case 10:
+        if (resultCode == RESULT_OK && data != null) {
+          ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+
+          Log.d("HELLO123", String.valueOf(getResources().getStringArray(R.array.array)));
+
+//          String st = "";
+//          String answer = "";
+////                    while (true) {
+////                        try {
+////                            if (br == null || !((st = br.readLine()) != null)) break;
+////                        } catch (IOException e) {
+////                            e.printStackTrace();
+////                        }
+////                        // checking of the word is there or not
+////                        for (String word : result) {
+////                            if (st.charAt(0) == word.charAt(0) && !third) {
+////                                first = true;
+////                                if (st.charAt(1) == word.charAt(1) && st.charAt(2) == word.charAt(2)) {
+////                                    third = true;
+////                                    answer = word;
+////                                }
+////                            }
+////                        }
+////                    }
+          frameValueTextView.setText(result.get(0));
+
+        }
     }
   }
 

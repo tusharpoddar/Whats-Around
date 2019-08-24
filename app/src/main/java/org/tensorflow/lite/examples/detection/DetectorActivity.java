@@ -31,10 +31,13 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorManager;
 import android.media.ImageReader.OnImageAvailableListener;
 import android.media.MediaPlayer;
+import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -100,6 +103,12 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private Context context;
   protected MediaPlayer player;
+
+  public DetectorActivity() {
+    takeInWords();
+
+
+  }
 
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -173,6 +182,32 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
   }
+
+  public void takeInWords() {
+    if (player != null) {
+      player.release();
+      player =  MediaPlayer.create(context, R.raw.lookingfor);
+      player.start();
+    }
+
+    final Handler handler = new Handler();
+    handler.postDelayed(new Runnable() {
+      @Override
+      public void run() {
+        getSpeechInput();
+      }
+    }, 1000);
+  }
+
+  final GestureDetector gestureDetector = new GestureDetector(new GestureDetector.SimpleOnGestureListener() {
+    public void onLongPress(MotionEvent e) {
+      takeInWords();
+    }
+  });
+
+  public boolean onTouchEvent(MotionEvent event) {
+    return gestureDetector.onTouchEvent(event);
+  };
 
   @Override
   public void onSensorChanged(SensorEvent event)
@@ -320,10 +355,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 new LinkedList<Classifier.Recognition>();
 
             for (final Classifier.Recognition result : results) {
-
-
-//              android.os.Process.killProcess(android.os.Process.myPid());
-//              System.exit(1);
               final RectF location = result.getLocation();
               if (location != null && result.getConfidence() >= minimumConfidence) {
                 canvas.drawRect(location, paint);
@@ -342,12 +373,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                       if (check.equals(val) && counter == 1) {
                           isFound = true;
                           Log.d("res-WORKS", "FOUND IT!!");
-//                        player
-//                        player.reset();
-//                        player.selectTrack(R.raw.stop);
-//                        player.prepareAsync();
-                        player.selectTrack(R.raw.straight);
-                        player.start();
+                          player.selectTrack(R.raw.straight);
+                          player.start();
                       } else if (check.equals(val) && counter == 0) {
                           counter++;
                           Log.d("res------", "MAYBE FOUND");
