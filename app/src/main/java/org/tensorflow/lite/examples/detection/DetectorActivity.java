@@ -16,6 +16,7 @@
 
 package org.tensorflow.lite.examples.detection;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
@@ -25,11 +26,17 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorManager;
 import android.media.ImageReader.OnImageAvailableListener;
+import android.media.MediaPlayer;
 import android.os.SystemClock;
 import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 import java.io.IOException;
 import java.util.LinkedList;
@@ -65,6 +72,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   private int counter = 0;
   private static boolean isFound = false;
 
+  private static String sayIt = "";
+
 
   OverlayView trackingOverlay;
   private Integer sensorOrientation;
@@ -87,6 +96,11 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private BorderedText borderedText;
 
+  private float yVal = 100;
+
+  private Context context;
+  protected MediaPlayer player;
+
   @Override
   public void onPreviewSizeChosen(final Size size, final int rotation) {
     final float textSizePx =
@@ -97,7 +111,15 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
     tracker = new MultiBoxTracker(this);
 
+    // Media Player
+    context = getApplicationContext();
+    player = MediaPlayer.create(context, R.raw.stop);
+
     int cropSize = TF_OD_API_INPUT_SIZE;
+
+    sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+    rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
     try {
       detector =
@@ -150,6 +172,94 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         });
 
     tracker.setFrameConfiguration(previewWidth, previewHeight, sensorOrientation);
+  }
+
+  @Override
+  public void onSensorChanged(SensorEvent event)
+  {
+
+    if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR)
+    {
+      rotVec = event.values;
+      rotVecCheck = true;
+      if (yVal == 100) {
+        yVal = rotVec[1];
+      } else {
+        if (yVal > rotVec[1]) {
+          float check = Math.abs(yVal - rotVec[1]);
+          if (check < .1 && check > .05 && !sayIt.equals("S-LEFT")) {
+            sayIt = "S-LEFT";
+
+            if (player != null) {
+              player.release();
+              player =  MediaPlayer.create(context, R.raw.slightleft);
+              player.start();
+            }
+
+            Log.d("Res Rot", " MOVE SlIGHT LEFT");
+          } else if (check >= .1 && !sayIt.equals("LEFT")) {
+            sayIt = "LEFT";
+            if (player != null) {
+              player.release();
+              player =  MediaPlayer.create(context, R.raw.rotateleft);
+              player.start();
+            }
+            Log.d("Res Rot", " MOVE LEFT");
+          } else if (check <= .05 && !sayIt.equals("FORWARD")) {
+            sayIt = "FORWARD";
+            if (player != null) {
+              player.release();
+              player =  MediaPlayer.create(context, R.raw.straight);
+              player.start();
+            }
+            Log.d("res-WORKS", "KEEP MOVING FORWARD");
+          }
+        } else if (yVal < rotVec[1]) {
+          float check = Math.abs(yVal - rotVec[1]);
+
+          if (check < .1 && check > .05 && !sayIt.equals("S-RIGHT")) {
+            sayIt = "S-RIGHT";
+
+            if (player != null) {
+              player.release();
+              player =  MediaPlayer.create(context, R.raw.slightright);
+              player.start();
+            }
+
+
+
+            Log.d("Res Rot", " MOVE SlIGHT RIGHT");
+          } else if (check >= .1 && !sayIt.equals("RIGHT")) {
+            sayIt = "RIGHT";
+            if (player != null) {
+              player.release();
+              player =  MediaPlayer.create(context, R.raw.rotateright);
+              player.start();
+            }
+
+            Log.d("Res Rot", " MOVE RIGHT");
+          } else if (check <= .05 && !sayIt.equals("FORWARD")) {
+            sayIt = "FORWARD";
+
+            if (player != null) {
+              player.release();
+              player =  MediaPlayer.create(context, R.raw.straight);
+              player.start();
+            }
+            Log.d("res-WORKS", "KEEP MOVING FORWARD");
+          }
+        } else {
+          sayIt = "FORWARD";
+          Log.d("res-WORKS", "KEEP MOVING FORWARD");
+        }
+      }
+    }
+  }
+
+  @Override
+  public void onAccuracyChanged(Sensor sensor, int accuracy)
+  {
+    return;
   }
 
   @Override
@@ -221,7 +331,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 cropToFrameTransform.mapRect(location);
                   if (isFound) {
                       // FOUND NOW!
-                      Log.d("res-WORKS", "NOW YOU SAY DTOP AND MOVE FORWARD");
+                      startSensing();
 
                   } else {
                       String check = result.getTitle().toLowerCase();
@@ -232,7 +342,12 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                       if (check.equals(val) && counter == 1) {
                           isFound = true;
                           Log.d("res-WORKS", "FOUND IT!!");
-
+//                        player
+//                        player.reset();
+//                        player.selectTrack(R.raw.stop);
+//                        player.prepareAsync();
+                        player.selectTrack(R.raw.straight);
+                        player.start();
                       } else if (check.equals(val) && counter == 0) {
                           counter++;
                           Log.d("res------", "MAYBE FOUND");
@@ -263,9 +378,28 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
         });
   }
 
+  public void startSensing ()
+  {
+    if (rotationVector!=null)
+    {
+      sensorManager.registerListener(this, rotationVector, SensorManager.SENSOR_DELAY_GAME);
+    }
+  }
+
+  public void stopSensing ()
+  {
+    sensorManager.unregisterListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR));
+  }
+
   @Override
   protected int getLayoutId() {
     return R.layout.camera_connection_fragment_tracking;
+  }
+
+  @Override
+  public synchronized void onDestroy() {
+    player.stop();
+    super.onDestroy();
   }
 
   @Override

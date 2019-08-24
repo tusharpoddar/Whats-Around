@@ -19,8 +19,12 @@ package org.tensorflow.lite.examples.detection;
 import android.Manifest;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
@@ -29,6 +33,7 @@ import android.media.Image;
 import android.media.Image.Plane;
 import android.media.ImageReader;
 import android.media.ImageReader.OnImageAvailableListener;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -54,7 +59,7 @@ import org.tensorflow.lite.examples.detection.env.ImageUtils;
 import org.tensorflow.lite.examples.detection.env.Logger;
 
 public abstract class CameraActivity extends AppCompatActivity
-    implements OnImageAvailableListener,
+    implements OnImageAvailableListener, SensorEventListener,
         Camera.PreviewCallback {
   private static final Logger LOGGER = new Logger();
 
@@ -74,13 +79,16 @@ public abstract class CameraActivity extends AppCompatActivity
   private Runnable postInferenceCallback;
   private Runnable imageConverter;
 
-  private LinearLayout bottomSheetLayout;
-  private LinearLayout gestureLayout;
-  private BottomSheetBehavior sheetBehavior;
+
+//  MOTION SENSORS
+  protected SensorManager sensorManager;
+  protected Sensor rotationVector;
+  protected float [] rotVec;
+  protected boolean rotVecCheck;
+
+
 
   protected TextView frameValueTextView, cropValueTextView, inferenceTimeTextView;
-  protected ImageView bottomSheetArrowImageView;
-  private TextView threadsTextView;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -102,11 +110,21 @@ public abstract class CameraActivity extends AppCompatActivity
       requestPermission();
     }
 
+
+
+    // Sensor Construction and Setup
+    sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+    rotationVector = null;
+    rotVecCheck = false;
+
     frameValueTextView = findViewById(R.id.frame_info); // USE THIS TO SET THE WORD
     cropValueTextView = findViewById(R.id.crop_info);
     inferenceTimeTextView = findViewById(R.id.inference_info);
 
-    frameValueTextView.setText("Chair");
+    SharedPreferences pref = getApplicationContext().getSharedPreferences("MyPref", MODE_PRIVATE);
+
+
+    frameValueTextView.setText(pref.getString("word", null));
 
   }
 
